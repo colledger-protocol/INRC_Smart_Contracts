@@ -1,13 +1,8 @@
-# Sample Hardhat Project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+PANOVERSE_DAO Run Commands - 
 
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
-```
+1. Install dependencies - npm i
+2. Compile contracts - npx hardhat compile
+3. Test cases folder - PanoverseDAO/test/PanoverseDAO_test.ts
+4. Run test cases - npx hardhat test
+5. Run test coverage - npx hardhat coverage
