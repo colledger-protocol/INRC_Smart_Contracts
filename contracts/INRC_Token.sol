@@ -35,7 +35,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract INRC_Token is Initializable, ContextUpgradeable, IINRC{
+abstract contract INRC_Token is Initializable, ContextUpgradeable, IINRC{
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -94,7 +94,7 @@ contract INRC_Token is Initializable, ContextUpgradeable, IINRC{
      * {IERC20-balanceOf} and {IERC20-transfer}.
      */
     function decimals() public view virtual override returns (uint8) {
-        return 18;
+        return 6;
     }
 
     /**
