@@ -75,6 +75,7 @@ contract INRC is Initializable, INRC_Token, INRC_Burnable, INRC_Permit, OwnableU
         feeCollector = _feeCollector;
         currency = "INR";   
         version = "1";
+        masterMinter = msg.sender;
     }
 
     function INRC_ISSUE(address _recepient, uint256 _amount) public pausable {
