@@ -48,7 +48,15 @@ describe("INRC Contract", function () {
         expandTo6Decimals(500)
       );
     });
-
+    it("shoud update master minter", async () => {
+      await INRC.connect(owner).updateMasterMinter(addr1.address);
+      expect(await INRC.masterMinter()).to.be.eq(addr1.address);
+    });
+    it("shoud revert master minter if called by non-owner", async () => {
+      await expect(
+        INRC.connect(addr1).updateMasterMinter(addr1.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
     it("should revert minting if not allowed by minter", async function () {
       await INRC.connect(owner).configureMinter(
         minter.address,
@@ -188,6 +196,25 @@ describe("INRC Contract", function () {
       );
       await INRC.connect(addr1).approve(owner.address, expandTo6Decimals(1000));
       await INRC.connect(owner).updateFee(100, 10); // 1% fee, max 10 tokens
+      await INRC.connect(owner).INRC_TRANSFER_FROM(
+        addr1.address,
+        addr2.address,
+        expandTo6Decimals(1000)
+      );
+      expect(await INRC.balanceOf(feeCollector.address)).to.equal(
+        expandTo6Decimals(10)
+      );
+      expect(await INRC.balanceOf(addr2.address)).to.equal(
+        expandTo6Decimals(990)
+      );
+    });
+    it("should apply max fees correctly for transfer from", async function () {
+      await INRC.connect(owner).INRC_ISSUE(
+        addr1.address,
+        expandTo6Decimals(1000)
+      );
+      await INRC.connect(addr1).approve(owner.address, expandTo6Decimals(1000));
+      await INRC.connect(owner).updateFee(200, 10); // 1% fee, max 10 tokens
       await INRC.connect(owner).INRC_TRANSFER_FROM(
         addr1.address,
         addr2.address,
@@ -706,7 +733,7 @@ describe("INRC Contract", function () {
       ).to.be.revertedWithCustomError(INRC, "Blacklisted");
     });
 
-    it.only("should handle transfer with permit correctly", async function () {
+    it("should handle transfer with permit correctly", async function () {
       await INRC.connect(owner).INRC_ISSUE(
         owner.address,
         expandTo6Decimals(100)
@@ -756,7 +783,7 @@ describe("INRC Contract", function () {
         )
       );
 
-      await INRC.connect(owner).transferWithAuthorization(
+      await INRC.connect(addr1).transferWithAuthorization(
         owner.address,
         addr1.address,
         addr2.address,
@@ -766,9 +793,139 @@ describe("INRC Contract", function () {
         r,
         s
       );
-      expect(await INRC.balanceOf(addr1.address)).to.equal(
+
+      expect(await INRC.balanceOf(addr2.address)).to.equal(
         expandTo6Decimals(100)
       );
+    });
+    it("it should revert transfer with permit when contract is paused", async function () {
+      await INRC.connect(owner).INRC_ISSUE(
+        owner.address,
+        expandTo6Decimals(100)
+      );
+      await INRC.connect(owner).togglePause(true);
+
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const ownerAddress = await owner.getAddress();
+      const spenderAddress = await addr1.getAddress();
+      const { v, r, s } = ethers.utils.splitSignature(
+        await owner._signTypedData(
+          {
+            name: "INRC",
+            version: "1",
+            chainId: network.config.chainId,
+            verifyingContract: INRC.address,
+          },
+          {
+            Permit: [
+              {
+                name: "owner",
+                type: "address",
+              },
+              {
+                name: "spender",
+                type: "address",
+              },
+              {
+                name: "value",
+                type: "uint256",
+              },
+              {
+                name: "nonce",
+                type: "uint256",
+              },
+              {
+                name: "deadline",
+                type: "uint256",
+              },
+            ],
+          },
+          {
+            owner: owner.address,
+            spender: addr1.address,
+            value: expandTo6Decimals(100),
+            nonce: 0,
+            deadline: deadline,
+          }
+        )
+      );
+
+      await expect(
+        INRC.connect(addr1).transferWithAuthorization(
+          owner.address,
+          addr1.address,
+          addr2.address,
+          expandTo6Decimals(100),
+          deadline,
+          v,
+          r,
+          s
+        )
+      ).to.be.revertedWithCustomError(INRC, "ContractPaused");
+    });
+    it("should revert transfer with permit when user is blacklisted", async function () {
+      await INRC.connect(owner).blacklistUser(addr1.address);
+      await INRC.connect(owner).INRC_ISSUE(
+        owner.address,
+        expandTo6Decimals(100)
+      );
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const ownerAddress = await owner.getAddress();
+      const spenderAddress = await addr1.getAddress();
+      const { v, r, s } = ethers.utils.splitSignature(
+        await owner._signTypedData(
+          {
+            name: "INRC",
+            version: "1",
+            chainId: network.config.chainId,
+            verifyingContract: INRC.address,
+          },
+          {
+            Permit: [
+              {
+                name: "owner",
+                type: "address",
+              },
+              {
+                name: "spender",
+                type: "address",
+              },
+              {
+                name: "value",
+                type: "uint256",
+              },
+              {
+                name: "nonce",
+                type: "uint256",
+              },
+              {
+                name: "deadline",
+                type: "uint256",
+              },
+            ],
+          },
+          {
+            owner: owner.address,
+            spender: addr1.address,
+            value: expandTo6Decimals(100),
+            nonce: 0,
+            deadline: deadline,
+          }
+        )
+      );
+
+      await expect(
+        INRC.connect(addr1).transferWithAuthorization(
+          owner.address,
+          addr1.address,
+          addr2.address,
+          expandTo6Decimals(100),
+          deadline,
+          v,
+          r,
+          s
+        )
+      ).to.be.revertedWithCustomError(INRC, "Blacklisted");
     });
   });
 
@@ -785,7 +942,17 @@ describe("INRC Contract", function () {
         expandTo6Decimals(500)
       );
     });
+    it("should revert rescue ERC20 tokens if called by non-owner", async function () {
+      await MockERC20.connect(owner).mint(INRC.address, expandTo6Decimals(500));
 
+      await expect(
+        INRC.connect(addr1).rescueERC20(
+          MockERC20.address,
+          addr1.address,
+          expandTo6Decimals(500)
+        )
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
     it("should revert if Ether transfer fails", async function () {
       await expect(
         INRC.connect(owner).rescueEther(
@@ -805,6 +972,17 @@ describe("INRC Contract", function () {
       expect(await INRC.minterAllowance(minter.address)).to.equal(
         expandTo6Decimals(500)
       );
+    });
+    it("should return minter status correctly", async function () {
+      await INRC.connect(owner).configureMinter(
+        minter.address,
+        expandTo6Decimals(500)
+      );
+      expect(await INRC.minterAllowance(minter.address)).to.equal(
+        expandTo6Decimals(500)
+      );
+      expect(await INRC.isMinter(minter.address)).to.be.eq(true);
+      expect(await INRC.isMinter(addr2.address)).to.be.eq(false);
     });
     it("should revert if configure minter called by non-owner", async function () {
       await expect(
@@ -875,6 +1053,15 @@ describe("INRC Contract", function () {
         await INRC.connect(owner).minterAllowance(minter.address)
       ).to.equal(0);
     });
+    it("should revert remove minter if called by non-owner", async function () {
+      await INRC.connect(owner).configureMinter(
+        minter.address,
+        expandTo6Decimals(500)
+      );
+      await expect(
+        INRC.connect(addr1).removeMinter(minter.address)
+      ).to.revertedWith("Ownable: caller is not the owner");
+    });
   });
 
   describe("Blacklist Management", function () {
@@ -912,6 +1099,44 @@ describe("INRC Contract", function () {
       await expect(INRC.connect(addr1).updateFee(200, 20)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       ); // 2% fee, max 20 tokens
+    });
+
+    it("should exclude from fee", async () => {
+      await INRC.connect(owner).excludeFromFee(addr1.address, true);
+      expect(await INRC.isExcludedFromFee(addr1.address)).to.be.eq(true);
+    });
+    it("should revert exclude from fee if called by non-owner", async () => {
+      await expect(
+        INRC.connect(addr1).excludeFromFee(addr1.address, true)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  describe("Contract Pausing functions", function () {
+    it("Should pause the contract", async () => {
+      await INRC.connect(owner).togglePause(true);
+      expect(await INRC.isPaused()).to.be.eq(true);
+    });
+    it("Should unpause the contract", async () => {
+      await INRC.connect(owner).togglePause(true);
+      await INRC.connect(owner).togglePause(false);
+      expect(await INRC.isPaused()).to.be.eq(false);
+    });
+    it("Should revert pause the contract if called by non-owner", async () => {
+      await expect(INRC.connect(addr1).togglePause(true)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Should revert pause the contract if already paused", async () => {
+      await INRC.connect(owner).togglePause(true);
+      await expect(INRC.connect(owner).togglePause(true)).to.be.revertedWith(
+        "Contract is already Paused !"
+      );
+    });
+    it("Should revert unpause the contract if already unpaused", async () => {
+      await expect(INRC.connect(owner).togglePause(false)).to.be.revertedWith(
+        "Contract is already Unpaused !"
+      );
     });
   });
 });

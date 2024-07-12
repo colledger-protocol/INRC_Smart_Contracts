@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
@@ -89,7 +90,7 @@ abstract contract INRC_Permit is
                 owner,
                 spender,
                 value,
-                nonces(owner),
+                _useNonce(owner),
                 deadline
             )
         );
@@ -164,13 +165,12 @@ abstract contract INRC_Permit is
                 _PERMIT_TYPEHASH,
                 _owner,
                 _sender,
-                _receiver,
                 _value,
                 _useNonce(_owner),
                 _deadline
             )
         );
-
+        
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
@@ -257,7 +257,6 @@ abstract contract INRC_Permit is
                 _PERMIT_TYPEHASH,
                 _owner,
                 _sender,
-                _receiver,
                 _value,
                 _checkNonce(_owner),
                 _deadline

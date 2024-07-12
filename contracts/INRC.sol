@@ -112,6 +112,8 @@ contract INRC is
             _transfer(owner(), feeCollector, fee);
             emit Transfer(owner(), feeCollector, fee);
         }
+        _afterTokenTransfer(owner(), _recepient, sendAmount);
+
         emit Transfer(owner(), _recepient, _amount);
         return true;
     }
@@ -133,6 +135,7 @@ contract INRC is
             emit Transfer(_from, feeCollector, fee);
         }
         _transfer(_from, _to, sendAmount);
+        _afterTokenTransfer(_from, _to, sendAmount);
         emit Transfer(_from, _to, _amount);
         return true;
     }
