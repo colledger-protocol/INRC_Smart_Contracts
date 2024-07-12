@@ -3,28 +3,23 @@ import { ethers, network } from "hardhat";
 import {
   expandTo18Decimals,
   expandTo6Decimals,
-} from "../test/utilities/utilities";
-import {PanoverseDAO } from "../typechain-types";
+} from "../test/utilities/helper/utilities";
+import { PanoverseDAO } from "../typechain-types";
 
 function sleep(ms: any) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function main() {
-    const dao = await ethers.getContractFactory("PanoverseDAO");
-    const DAO = await dao.deploy();
-    await sleep(2000);
-    console.log("DAO Factory- "+DAO.address);
-
-}  
+  const dao = await ethers.getContractFactory("PanoverseDAO");
+  const DAO = await dao.deploy();
+  await sleep(2000);
+  console.log("DAO Factory- " + DAO.address);
+}
 
 main()
-.then(()=>process.exit(0))
-.catch((error)=>{
+  .then(() => process.exit(0))
+  .catch((error) => {
     console.error(error);
     process.exit(1);
-}) ;
-
-
-
+  });

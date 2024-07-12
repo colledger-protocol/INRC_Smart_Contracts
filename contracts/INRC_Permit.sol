@@ -22,14 +22,21 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  *
  * @custom:storage-size 51
  */
-abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradeable, EIP712Upgradeable {
+abstract contract INRC_Permit is
+    Initializable,
+    INRC_Token,
+    IERC20PermitUpgradeable,
+    EIP712Upgradeable
+{
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private constant _PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
     /**
      * @dev In previous versions `_PERMIT_TYPEHASH` was declared as `immutable`.
      * However, to ensure consistency with the upgradeable transpiler, we will continue
@@ -56,7 +63,9 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         __EIP712_init_unchained(name, "1");
     }
 
-    function __ERC20Permit_init_unchained(string memory) internal onlyInitializing {}
+    function __ERC20Permit_init_unchained(
+        string memory
+    ) internal onlyInitializing {}
 
     /**
      * @dev See {IERC20Permit-permit}.
@@ -70,22 +79,32 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         bytes32 r,
         bytes32 s
     ) internal virtual {
-        if(block.timestamp>deadline) {
+        if (block.timestamp > deadline) {
             revert DeadlinePassed();
         }
 
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                owner,
+                spender,
+                value,
+                nonces(owner),
+                deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
+
         require(signer == owner, "ERC20Permit: invalid signature");
 
         _approve(owner, spender, value);
 
         emit Approval(owner, spender, value);
     }
-    
+
     function _receiveWithAuthorization(
         address _owner,
         address _receiver,
@@ -94,29 +113,37 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) internal virtual{
-        if(block.timestamp>_deadline) {
+    ) internal virtual {
+        if (block.timestamp > _deadline) {
             revert DeadlinePassed();
         }
 
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, _owner, _receiver, _value, _useNonce(_owner), _deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                _owner,
+                _receiver,
+                _value,
+                _useNonce(_owner),
+                _deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
 
-        if(signer!=_owner) {
+        if (signer != _owner) {
             revert InvalidSigner();
         }
 
-        if(msg.sender!=_receiver) {
+        if (msg.sender != _receiver) {
             revert InvalidReceiver();
         }
 
         _transfer(_owner, _receiver, _value);
-        
-        emit Transfer(_owner, _receiver, _value);
 
+        emit Transfer(_owner, _receiver, _value);
     }
 
     function _transferWithAuthorization(
@@ -128,30 +155,38 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         uint8 v,
         bytes32 r,
         bytes32 s
-        ) internal virtual {
-            if(block.timestamp>_deadline) {
-                revert DeadlinePassed();
-            }
-            
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, _owner, _sender, _receiver, _value, _useNonce(_owner), _deadline));
+    ) internal virtual {
+        if (block.timestamp > _deadline) {
+            revert DeadlinePassed();
+        }
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                _owner,
+                _sender,
+                _receiver,
+                _value,
+                _useNonce(_owner),
+                _deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
 
-        if(signer!=_owner) {
+        if (signer != _owner) {
             revert InvalidSigner();
         }
 
-        if(msg.sender!=_sender) {
+        if (msg.sender != _sender) {
             revert InvalidSender();
         }
 
         _transfer(_owner, _receiver, _value);
 
         emit Transfer(_owner, _receiver, _value);
-
-        }
+    }
 
     function checkSpendAuthorization(
         address owner,
@@ -160,10 +195,18 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         uint256 deadline,
         uint8 v,
         bytes32 r,
-        bytes32 s   
-    ) public view returns(address) {
-
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _checkNonce(owner), deadline));
+        bytes32 s
+    ) public view returns (address) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                owner,
+                spender,
+                value,
+                _checkNonce(owner),
+                deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
@@ -180,9 +223,17 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public view returns(address) {
-
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, _owner, _receiver, _value, _checkNonce(_owner), _deadline));
+    ) public view returns (address) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                _owner,
+                _receiver,
+                _value,
+                _checkNonce(_owner),
+                _deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
@@ -200,21 +251,32 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public view returns(address) {
-        
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, _owner, _sender, _receiver, _value, _checkNonce(_owner), _deadline));
+    ) public view returns (address) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _PERMIT_TYPEHASH,
+                _owner,
+                _sender,
+                _receiver,
+                _value,
+                _checkNonce(_owner),
+                _deadline
+            )
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
 
-        return(signer);
+        return (signer);
     }
 
     /**
      * @dev See {IERC20Permit-nonces}.
      */
-    function nonces(address owner) public view virtual override returns (uint256) {
+    function nonces(
+        address owner
+    ) public view virtual override returns (uint256) {
         return _nonces[owner].current();
     }
 
@@ -231,13 +293,15 @@ abstract contract INRC_Permit is Initializable, INRC_Token, IERC20PermitUpgradea
      *
      * _Available since v4.1._
      */
-    function _useNonce(address owner) internal virtual returns (uint256 current) {
+    function _useNonce(
+        address owner
+    ) internal virtual returns (uint256 current) {
         CountersUpgradeable.Counter storage nonce = _nonces[owner];
         current = nonce.current();
         nonce.increment();
     }
 
-    function _checkNonce(address owner) internal view returns(uint256) {
+    function _checkNonce(address owner) internal view returns (uint256) {
         CountersUpgradeable.Counter storage nonce = _nonces[owner];
         return nonce.current();
     }
